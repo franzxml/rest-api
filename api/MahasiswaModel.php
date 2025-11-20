@@ -8,78 +8,57 @@ class MahasiswaModel
 
     public function __construct()
     {
-        $this->conn = (new Database())->connect();
+        // langsung pakai properti conn dari Database
+        $this->conn = (new Database())->conn;
     }
 
     public function getAll()
     {
-        $stmt = $this->conn->query("SELECT * FROM {$this->table}");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $sql = "select * from {$this->table} order by id desc";
+        $stmt = $this->conn->query($sql);
+        return $stmt->fetchAll();
     }
 
-    public function getById($id)
+    public function find($id)
     {
-        // $check = $this->check($id);
-        // if ($check !== true) {
-        //     return $check; // langsung return hasil dari check()
-        // }
-
-        $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE id = ?");
-        $stmt->execute([$id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $sql = "select * from {$this->table} where id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([":id" => $id]);
+        return $stmt->fetch();
     }
 
-    public function create($data)
+    public function store($data)
     {
-        $stmt = $this->conn->prepare("INSERT INTO {$this->table} (nama, jurusan) VALUES (?, ?)");
-        $stmt->execute([$data['nama'], $data['jurusan']]);
-        return ["message" => "Data mahasiswa berhasil ditambahkan"];
+        $sql = "insert into {$this->table} (nama, jurusan) values (:nama, :jurusan)";
+        $stmt = $this->conn->prepare($sql);
+        $ok = $stmt->execute([
+            ":nama" => $data["nama"],
+            ":jurusan" => $data["jurusan"]
+        ]);
+
+        return [
+            "success" => $ok,
+            "id" => $ok ? $this->conn->lastInsertId() : null
+        ];
     }
 
     public function update($id, $data)
     {
-        $check = $this->check($id);
-        if ($check !== true) {
-            return $check; // langsung return hasil dari check()
-        }
-
-        $stmt = $this->conn->prepare("UPDATE {$this->table} SET nama = ?, jurusan = ? WHERE id = ?");
-        $stmt->execute([$data['nama'], $data['jurusan'], $id]);
-        return ["message" => "Data mahasiswa berhasil diperbarui"];
+        $sql = "update {$this->table} set nama = :nama, jurusan = :jurusan where id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $ok = $stmt->execute([
+            ":nama" => $data["nama"],
+            ":jurusan" => $data["jurusan"],
+            ":id" => $id
+        ]);
+        return ["success" => $ok];
     }
 
     public function delete($id)
     {
-        $check = $this->check($id);
-        if ($check !== true) {
-            return $check; // langsung return hasil dari check()
-        }
-
-        // Jika ada, baru hapus
-        $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE id = ?");
-        $stmt->execute([$id]);
-
-        return [
-            "status" => true,
-            "message" => "Data mahasiswa dengan ID {$id} berhasil dihapus"
-        ];
-    }
-
-    private function check($id)
-    {
-        // Cek apakah data ada
-        $stmt = $this->conn->prepare("SELECT COUNT(*) FROM {$this->table} WHERE id = ?");
-        $stmt->execute([$id]);
-        $count = $stmt->fetchColumn();
-
-        if ($count == 0) {
-            // Data tidak ditemukan
-            return [
-                "status" => false,
-                "message" => "Data mahasiswa dengan ID {$id} tidak ditemukan"
-            ];
-        } else {
-            return true;
-        }
+        $sql = "delete from {$this->table} where id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $ok = $stmt->execute([":id" => $id]);
+        return ["success" => $ok];
     }
 }
